@@ -1,7 +1,7 @@
 import streamlit as st
 from langchain.chains import ConversationChain
 from langchain_openai import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationSummaryMemory
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -54,21 +54,23 @@ def get_prompt_template(subject, style):
 
 prompt_template = get_prompt_template(subject, style)
 
+client = ChatOpenAI(
+    model="deepseek-chat",
+    base_url="https://api.deepseek.com",
+    api_key=st.secrets["OPENAI_API_KEY"],
+)
 
-def generate_response(user_input, prompt_template, memory):
-    client = ChatOpenAI(
-        model="deepseek-chat",
-        base_url="https://api.deepseek.com",
-        api_key=st.secrets["OPENAI_API_KEY"],
-    )
 
-    chain = ConversationChain(llm=client, memory=memory, prompt=prompt_template)
+def generate_response(user_input, prompt_template, memory, llm=client):
+    chain = ConversationChain(llm=llm, memory=memory, prompt=prompt_template)
     response = chain.invoke({"input": user_input})
     return response["response"]
 
 
 if "memory" not in st.session_state:
-    st.session_state["memory"] = ConversationBufferMemory(return_messages=True)
+    st.session_state["memory"] = ConversationSummaryMemory(
+        return_messages=True, llm=client
+    )
     st.session_state["messages"] = [
         {"role": "assistant", "content": "你好，我是你的学习助手！"}
     ]
